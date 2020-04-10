@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+message Memo {
+  enum ReportType {
+    SELF_REPORTED       = 0;
+    CERTIFIED_INFECTION = 1;
+    CERTIFIED_IMMUNITY  = 2;
+  }
+  ReportType reportType = 1;
+  int32 diseaseID = 2;
+  repeated int32 symptomID = 3;
+  bytes healthAuthorityPublicKey = 4;
+  bytes signature = 5;
+}
