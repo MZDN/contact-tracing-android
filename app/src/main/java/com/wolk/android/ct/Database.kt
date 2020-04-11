@@ -1,4 +1,4 @@
-package com.wolk.android.tcn
+package com.wolk.android.ct
 
 import android.content.Context
 import androidx.room.Database
@@ -7,20 +7,20 @@ import androidx.room.RoomDatabase
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-@Database(entities = [TCNUser::class,TCNProximity::class,TCNMatch::class], version = 2, exportSchema = false)
-abstract class TCNDatabase : RoomDatabase() {
-    abstract fun tcnUserDAO(): TCNUserDAO
-    abstract fun tcnProximityDAO(): TCNProximityDAO
-    abstract fun tcnMatchDAO(): TCNMatchDAO
+@Database(entities = [ContactInfoDAO::class,DailyTracingKeyDAO::class], version = 1, exportSchema = false)
+abstract class CTDatabase : RoomDatabase() {
+    abstract fun dailyTracingKeyDAO(): DailyTracingKeyDAO
+    abstract fun contactInfoDAO(): ContactInfoDAO
+    abstract fun rollingProximityIdentifierDAO(): RollingProximityIdentifierDAO
 
     companion object {
         private const val NUMBER_OF_THREADS = 4
         val databaseWriteExecutor: ExecutorService = Executors.newFixedThreadPool(NUMBER_OF_THREADS)
 
         @Volatile
-        private var INSTANCE: TCNDatabase? = null
+        private var INSTANCE: CTDatabase? = null
 
-        fun getInstance(context: Context): TCNDatabase =
+        fun getInstance(context: Context): CTDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
             }
@@ -28,7 +28,7 @@ abstract class TCNDatabase : RoomDatabase() {
         private fun buildDatabase(context: Context) =
             Room.databaseBuilder(
                 context.applicationContext,
-                TCNDatabase::class.java, "tcn.db"
+                CTDatabase::class.java, "CT.db"
             ).fallbackToDestructiveMigration()
                 .allowMainThreadQueries()
                 .build()

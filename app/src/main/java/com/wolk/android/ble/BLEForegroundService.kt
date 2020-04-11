@@ -2,7 +2,6 @@ package com.wolk.android.ble
 
 import android.app.*
 import android.bluetooth.*
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -11,10 +10,7 @@ import androidx.lifecycle.LifecycleService
 
 import com.wolk.android.MainActivity
 import com.wolk.android.R
-import com.wolk.android.TCNApplication
-
-import com.wolk.android.tcn.TCNDatabase
-import com.wolk.android.utils.toBytes
+import com.wolk.android.CTApplication
 
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -22,7 +18,7 @@ import java.util.concurrent.TimeUnit
 class BLEForegroundService : LifecycleService() {
 
     // APP
-    private var app: TCNApplication? = null
+    private var app: CTApplication? = null
     private var timer: Timer? = null
 
     companion object {
@@ -33,7 +29,7 @@ class BLEForegroundService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        val application = (application as? TCNApplication) ?: return
+        val application = (application as? CTApplication) ?: return
         app = application
         app?.bleAdvertiser = BLEAdvertiser(
 

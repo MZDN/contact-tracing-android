@@ -3,25 +3,23 @@ package com.wolk.android
 import android.app.Application
 import android.content.Intent
 import android.util.Log
-import com.wolk.android.TCNApplication.TCNRepo
 import com.wolk.android.ble.BLEAdvertiser
 import com.wolk.android.ble.BLEForegroundService
 import com.wolk.android.ble.BLEScanner
-import com.wolk.android.tcn.*
+import com.wolk.android.ct.*
 
-class TCNApplication : Application() {
+class CTApplication : Application() {
 
     var bleAdvertiser: BLEAdvertiser? = null
     var bleScanner: BLEScanner? = null
 
-    private lateinit var repo: TCNRepo
+    @ExperimentalStdlibApi
+    private lateinit var repo: CTRepo
 
+    @ExperimentalStdlibApi
     fun initRepo() {
-        val tcnUserDao = TCNDatabase.getInstance(this).tcnUserDAO()
-        val tcnProximityDao = TCNDatabase.getInstance(this).tcnProximityDAO()
-        repo = TCNRepo(this, TCNApi.create(), tcnUserDao, tcnProximityDao )
+        repo = CTRepo(this, API.create())
     }
-    internal class TCNRepo(application: Application, private val tcnApi: TCNApi, private val tcnUserDao: TCNUserDAO, private val tcnProximityDao: TCNProximityDAO)
 
     private fun configureAdvertising(enabled: Boolean) {
         Intent(this, BLEForegroundService::class.java).also { intent ->
@@ -33,6 +31,7 @@ class TCNApplication : Application() {
         }
     }
 
+    @ExperimentalStdlibApi
     override fun onCreate() {
         Log.i("h", "x")
         super.onCreate()

@@ -7,8 +7,8 @@
 
     <data>
         <variable
-            name="contactEvent"
-            type="com.wolk.android.tcn.TCNProximity" />
+            name="rollingProximityIdentifier"
+            type="com.wolk.android.ct.RollingProximityIdentifier" />
     </data>
 
     <androidx.appcompat.widget.LinearLayoutCompat

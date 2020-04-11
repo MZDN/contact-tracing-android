@@ -8,11 +8,11 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.wolk.android.ct.*
 import java.util.*
-
-import com.wolk.android.tcn.TCNDatabase
-import com.wolk.android.tcn.TCNProximity
-import com.wolk.android.tcn.TCNProximityDAO
 
 class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
 
@@ -188,16 +188,14 @@ class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
         startAdvertising(BluetoothService.TCN_SERVICE)
     }
 
-    fun logTCNProximity(raw: ByteArray) {
-        val publicKey = raw.copyOfRange(0,65)
-        val sigToVerify = raw.copyOfRange(65,130)
-        val memo = raw.copyOfRange(130, 512)
-        TCNDatabase.databaseWriteExecutor.execute {
-            val dao: TCNProximityDAO = TCNDatabase.getInstance(context).tcnProximityDAO()
-            TCNProximity.observe(publicKey, sigToVerify, memo)?.let {
-                dao.insert(it)
-            }
+    fun logRollingIdentifier(rpi: ByteArray) {
+        CTDatabase.databaseWriteExecutor.execute {
+            val dao: RollingProximityIdentifierDAO = CTDatabase.getInstance(context).rollingProximityIdentifierDAO()
+            val ts = currentTimestamp()
+            val r = RollingProximityIdentifier(rpi, dayNumber(ts), timeIntervalNumber(ts), 1)
+            dao.insert(r)
         }
     }
+
 
 }

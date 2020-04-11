@@ -1,4 +1,4 @@
-package com.wolk.android.ui.tcn
+package com.wolk.android.ui.ct
 
 import android.app.Application
 import android.content.Context
@@ -10,15 +10,16 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DividerItemDecoration
 import com.wolk.android.R
-import com.wolk.android.tcn.TCNDatabase
-import com.wolk.android.databinding.FragmentTCNBinding
-import com.wolk.android.tcn.TCNUserDAO
+import com.wolk.android.ct.CTDatabase
+import com.wolk.android.ct.RollingProximityIdentifier
+import com.wolk.android.ct.RollingProximityIdentifierDAO
+import com.wolk.android.databinding.FragmentRollingProximityIdentifierBinding
 
 
-class TCNFragment : Fragment() {
+class CTFragment : Fragment() {
 
-    private lateinit var contactEventsViewModel: TCNViewModel
-    private lateinit var binding: FragmentTCNBinding
+    private lateinit var contactEventsViewModel: CTViewModel
+    private lateinit var binding: FragmentRollingProximityIdentifierBinding
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,15 +28,15 @@ class TCNFragment : Fragment() {
     ): View? {
         val context = context ?: return null
 
-        val database = TCNDatabase.getInstance(context)
-        val viewModel: TCNViewModel by viewModels(factoryProducer = {
-            TCNViewModelFactory(database.tcnProximityDAO(), context.applicationContext as Application)
+        val database = CTDatabase.getInstance(context)
+        val viewModel: CTViewModel by viewModels(factoryProducer = {
+            CTViewModelFactory(database.rollingProximityIdentifierDAO(), context.applicationContext as Application)
         })
         contactEventsViewModel = viewModel
 
-        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_t_c_n, container, false)
+        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_rolling_proximity_identifier, container, false)
         binding.lifecycleOwner = this
-        val adapter = TCNAdapter()
+        val adapter = CTAdapter()
         binding.contactEventsRecyclerview.adapter = adapter
         binding.contactEventsRecyclerview.addItemDecoration(
             DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
@@ -61,8 +62,8 @@ class TCNFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.clear -> {
-                TCNDatabase.databaseWriteExecutor.execute {
-                    val dao: TCNUserDAO = TCNDatabase.getInstance(requireActivity()).tcnUserDAO()
+                CTDatabase.databaseWriteExecutor.execute {
+                    val dao: RollingProximityIdentifierDAO = CTDatabase.getInstance(requireActivity()).rollingProximityIdentifierDAO()
                     dao.deleteAll()
                 }
             }

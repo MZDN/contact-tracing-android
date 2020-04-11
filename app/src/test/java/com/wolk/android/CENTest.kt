@@ -1,6 +1,6 @@
 package com.wolk.android
 
-import com.wolk.android.tcn.AESSecurityCap
+import com.wolk.android.ct.AESSecurityCap
 import org.junit.Test
 import java.security.*
 

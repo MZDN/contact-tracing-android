@@ -1,2 +1,2 @@
-rootProject.name='CEN Client'
+rootProject.name='Wolk Contact Tracing Cloud'
 include ':app'

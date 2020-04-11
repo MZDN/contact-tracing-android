@@ -1,4 +1,4 @@
-package com.wolk.android.ui.tcn
+package com.wolk.android.ui.ct
 
 import android.app.Application
 import android.content.Context
@@ -8,16 +8,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.paging.PagedList
 import androidx.paging.toLiveData
 import com.wolk.android.R
-import com.wolk.android.tcn.TCNProximity
-import com.wolk.android.tcn.TCNProximityDAO
-import com.wolk.android.tcn.TCNUser
+import com.wolk.android.ct.RollingProximityIdentifier
+import com.wolk.android.ct.RollingProximityIdentifierDAO
 
 
-class TCNViewModel(contactEventDAO: TCNProximityDAO, application: Application) : AndroidViewModel(application) {
+class CTViewModel(rollingProximityIdentifierDAO: RollingProximityIdentifierDAO, application: Application) : AndroidViewModel(application) {
 
-    val contactEvents: LiveData<PagedList<TCNProximity>> =
+    val contactEvents: LiveData<PagedList<RollingProximityIdentifier>> =
 
-        contactEventDAO.pagedAllSortedByDescTimestamp.toLiveData(pageSize = 50)
+        rollingProximityIdentifierDAO.pagedAllSortedByDescTimestamp.toLiveData(pageSize = 50)
 
     var isContactEventLoggingEnabled = MutableLiveData<Boolean>().apply {
         val isEnabled = application.getSharedPreferences(

@@ -3,7 +3,7 @@ package com.wolk.android.adapters
 import android.widget.TextView
 import androidx.databinding.BindingAdapter
 import androidx.fragment.app.Fragment
-import com.wolk.android.tcn.TCNProximity
+import com.wolk.android.ct.TCNProximity
 
 /**
  * Binding adapters that work with a fragment instance.

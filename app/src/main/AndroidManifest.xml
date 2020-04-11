@@ -14,7 +14,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:name="com.wolk.android.TCNApplication">
+        android:name="com.wolk.android.CTApplication">
 
         <service
             android:name="com.wolk.android.ble.BLEForegroundService"

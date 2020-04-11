@@ -7,8 +7,8 @@
 
     <fragment
         android:id="@+id/navigation_contact_events"
-        android:name="com.wolk.android.ui.tcn.TCNFragment"
+        android:name="com.wolk.android.ui.ct.CTFragment"
         android:label="@string/title_contact_events"
-        tools:layout="@layout/fragment_t_c_n" />
+        tools:layout="@layout/fragment_rolling_proximity_identifier" />
 
 </navigation>
