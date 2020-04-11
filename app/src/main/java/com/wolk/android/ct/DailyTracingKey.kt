@@ -12,5 +12,5 @@ data class DailyTracingKey(
     val key: ByteArray,
 
     @ColumnInfo(name = "date")
-    var dayNumber: Int = 0
+    var dayNumber: UInt = 0u
 )

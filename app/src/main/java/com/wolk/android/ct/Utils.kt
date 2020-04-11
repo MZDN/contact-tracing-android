@@ -11,6 +11,17 @@ import java.security.*
 import javax.crypto.*
 import javax.crypto.spec.SecretKeySpec
 
+enum class Status {
+    SUCCESS,
+    FAILED_REJECTED_OPT_IN ,
+    FAILED_SERVICE_DISABLED,
+    FAILED_BLUETOOTH_SCANNING_DISABLED,
+    FAILED_TEMPORARILY_DISABLED,
+    FAILED_INSUFFICENT_STORAGE,
+    FAILED_INTERNAL
+}
+
+
 @ExperimentalUnsignedTypes
 fun compareByteArray(a : UByteArray, b : UByteArray) : Int {
     for (i in 0..a.size) {
