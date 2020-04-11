@@ -91,10 +91,6 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
         periodicGetDiagnosisKeys()
     }
 
-    private fun computeRollingProximityIdentifier() {
-
-    }
-
     @ExperimentalStdlibApi
     private fun ratchetRollingProximityIdentifier() {
         val s = "CT-RPI".encodeToByteArray()
@@ -202,6 +198,17 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
     }
 
     /**
+     * Check if this user has come into contact with a provided key. Contact
+     * calculation happens daily.
+     */
+    override fun getContactInformation(k : DailyTracingKey): List<ContactInfo?>? {
+        val l = MutableList<ContactInfo?>(0) { _ -> ContactInfo() }
+        return l
+    }
+
+    var isSharingDailyTracingKeys : Boolean = false
+    var isSharingDailyTracingKeysStart : UInt = 0u
+    /**
      * Flags daily tracing keys as to be stored on the server.
      *
      * This should only be done after proper verification is performed on the
@@ -220,15 +227,23 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
      * Only 14 days of history are available.
      */
     override fun startSharingDailyTracingKeys() : Status {
-        return  Status.SUCCESS // TODO
-    }
+        // TODO: show user dialog for sharing
 
+        // TODO: Store this in preferences/...
+        isSharingDailyTracingKeys = true
+        isSharingDailyTracingKeysStart = dayNumber(currentTimestamp())
+
+        contactTracingCallback?.requestUploadDailyTracingKeys()
+
+        return  Status.SUCCESS
+    }
 
     /**
      * Provides a list of diagnosis keys for contact checking. The keys are to be
      * provided by a centralized service (e.g. synced from the server).
      *
-     * When invoked after the requestProvideDiagnosisKeys callback, this triggers a
+     * When invoked after the requestProvideDiagnosisKeys callback [Requests client
+     * to provide a list of all diagnosis keys from the server.], this triggers a
      * recalculation of contact status which can be obtained via hasContact()
      * after the calculation has finished.
      *
@@ -239,11 +254,21 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
     }
 
     /**
+     * Check if this user has come into contact with a provided key. Contact
+     * calculation happens daily.
+     */
+    override fun hasContact(k : DailyTracingKey): Boolean? {
+        return   false // TODO
+    }
+
+    var contactTracingCallback: ContactTracingCallback? = null
+
+    /**
      * Handles an intent which was invoked via the contactTracingCallback and
      * calls the corresponding ContactTracingCallback methods.
      */
     override fun handleIntent(intentCallback: Intent?, callback: ContactTracingCallback?) {
-
+        contactTracingCallback = callback
     }
 
     /**
@@ -283,21 +308,5 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
         return 100000
     }
 
-    /**
-     * Check if this user has come into contact with a provided key. Contact
-     * calculation happens daily.
-     */
-    override fun hasContact(k : DailyTracingKey): Boolean? {
-        return   false // TODO
-    }
-
-    /**
-     * Check if this user has come into contact with a provided key. Contact
-     * calculation happens daily.
-     */
-    override fun getContactInformation(k : DailyTracingKey): List<ContactInfo?>? {
-        val l = MutableList<ContactInfo?>(0) { _ -> ContactInfo() }
-        return l
-    }
 }
 
