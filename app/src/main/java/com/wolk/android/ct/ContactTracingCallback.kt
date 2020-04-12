@@ -5,7 +5,7 @@ interface ContactTracingCallback {
     // be warned by the app of possible exposure.
     fun onContact()
 
-    // Requests client to upload the provided daily tracing keys to their server for
+    // Requests client A to upload the provided daily tracing keys to their server for
     // distribution after the other user’s client receives the
     // requestProvideDiagnosisKeys callback. The keys provided here will be at
     // least 24 hours old.

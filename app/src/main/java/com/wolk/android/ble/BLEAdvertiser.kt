@@ -6,15 +6,13 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
+import android.os.Handler
 import android.os.ParcelUuid
 import android.util.Log
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import com.wolk.android.ct.*
 import java.util.*
 
-class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
+class BLEAdvertiser @ExperimentalStdlibApi constructor(val context: Context, adapter: BluetoothAdapter, val repo: CTRepo) {
 
     companion object {
         private const val TAG = "BluetoothLeAdvertiser"
@@ -113,6 +111,27 @@ class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
         return randomString.toByteArray()
     }
 
+    var started = false
+    val currentRPI : ByteArray? = ByteArray(32)
+
+    @ExperimentalStdlibApi
+    private fun checkRollingProximityIdentifier() {
+
+        // ServiceData holds RPI that the Android peripheral is advertising
+        if ( started ) {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }
+        advertiser.run {
+            started = true
+            startAdvertising(BluetoothService.TCN_SERVICE)
+        }
+
+        Handler().postDelayed({
+            checkRollingProximityIdentifier()
+        }, 5 * 1000L)
+    }
+
+    @ExperimentalStdlibApi
     fun startAdvertising(serviceUUID: UUID?) {
         try {
             val advertiseSettings = AdvertiseSettings.Builder()
@@ -129,6 +148,7 @@ class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
             val advertiseData = AdvertiseData.Builder()
                 .setIncludeDeviceName(false)
                 .addServiceUuid(ParcelUuid(serviceUUID))
+                .addServiceData(ParcelUuid(serviceUUID), repo.rpi.rpi)
                 .build()
 
             (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager).let { bluetoothManager ->
@@ -179,6 +199,7 @@ class BLEAdvertiser(val context: Context, adapter: BluetoothAdapter) {
 
     // Changes the TCN to a new random UUID in the service data field
     // NOTE: This will also log the TCN and stop/start the advertiser
+    @ExperimentalStdlibApi
     fun changeContactEventIdentifierInServiceDataField() {
         Log.i(TAG, "Changing the contact event identifier in service data field...")
         stopAdvertising()

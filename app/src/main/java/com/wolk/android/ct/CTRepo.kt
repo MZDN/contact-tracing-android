@@ -5,7 +5,6 @@ import android.content.Intent
 import android.app.Application
 import android.os.Handler
 import android.util.Log
-import androidx.lifecycle.MutableLiveData
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -20,43 +19,70 @@ import com.google.crypto.tink.subtle.Hkdf.computeHkdf
 // to manage the Apple/Google Contact Tracing protocol with Room
 // interacting with a Wolk Contact Tracing via the CTAPI
 @ExperimentalStdlibApi
-internal class CTRepo(application: Application, private val ctAPI: API) : ContactTracing {
-
+class CTRepo(application: Application, private val ctAPI: API) : ContactTracing {
     private val contactInfoDAO: ContactInfoDAO
     private val dailyTracingKeyDAO: DailyTracingKeyDAO
     private val rollingProximityIdentifierDAO: RollingProximityIdentifierDAO
     private val TAG = "CT"
-
     private val periodicGetDiagnosisFrequencyInSeconds = 180
     private val periodicRachetFrequencyInSeconds = 600
 
+    // Core State Variables
     // the 32-byte Tracing Key (never leaves the device)
-    private var tracingKey : ByteArray = ByteArray(32)
-    var dailyTracingKey: MutableLiveData<DailyTracingKey?> = MutableLiveData<DailyTracingKey?>()
+    var tracingKey: ByteArray
+
+    // dailyTracingKey
+    var dailyTracingKey: DailyTracingKey
+
+    // rolling proximity identifier
+    var rpi : RollingProximityIdentifier
 
     init {
         val db = CTDatabase.getInstance(application)
         dailyTracingKeyDAO = db.dailyTracingKeyDAO()
         contactInfoDAO = db.contactInfoDAO()
         rollingProximityIdentifierDAO = db.rollingProximityIdentifierDAO()
+
+        // TODO: generate this only once, put in key storage
+        tracingKey = generateTracingKey()
+        dailyTracingKey = generateDailyTracingKey()
+        rpi = generateRollingProximityIdentifier()
+
+        // Setup regular Rolling Proximity Identify refresh, which powers BLE broadcast
+        ratchetRollingProximityIdentifier()
+
+        // Setup regular query for
+        periodicGetDiagnosisKeys()
     }
 
     // TracingKey is generated when contact tracing is enabled on the device and is securely stored on the device
-    fun generateTracingKey() {
+    fun generateTracingKey() : ByteArray {
         // The 32 byte Tracing key is derived as follows
         // TODO: put it in the keystore
         tracingKey = nextBytes(tracingKey, 0, 32)
+        return tracingKey
     }
 
     // A Daily Tracing Key is generated for every 24-hour window where the protocol is advertising
     // From the Tracing key, we drive the 16-byte Daily Tracing Key in the following way:
     //   dtk <- HKDF(tk, NULL, (UTF("CT-DTK")||D_i), 16)
     @ExperimentalStdlibApi
-    fun generateDailyTracingKey() {
+    fun generateDailyTracingKey() : DailyTracingKey {
         val s = "CT-DTK".encodeToByteArray()
         val dayNum = dayNumber(currentTimestamp())
         val info = s.plus(UIntToByteArray(dayNum))
-        dailyTracingKey.value =  DailyTracingKey ( HKDF(tracingKey, null, info, 16), dayNum )
+        val dailyTracingKey =  DailyTracingKey ( HKDF(tracingKey, null, info, 16), dayNum )
+        return dailyTracingKey
+    }
+
+    fun generateRollingProximityIdentifier() : RollingProximityIdentifier {
+        val s = "CT-RPI".encodeToByteArray()
+        val dayNumber = dayNumber(currentTimestamp())
+        val timeInterval = timeIntervalNumber(currentTimestamp())
+        val info = s.plus(UIntToByteArray(timeInterval))
+        val rpiRaw = HMAC(dailyTracingKey.key, info)
+        val rpi = RollingProximityIdentifier(rpiRaw, dayNumber, timeInterval)
+        return rpi
     }
 
     // HKDF designates the HKDF function as defined by RFC 5869, using the SHA-256 hash function
@@ -72,32 +98,12 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
         return mac.computeMac(data)
     }
 
-
     fun insert(dtk: DailyTracingKey) {
         CTDatabase.databaseWriteExecutor.execute { dailyTracingKeyDAO.insert(dtk) }
     }
 
-    // lastGetDiagnosisKey is the last time (unix timestamp) the Report were requested
-    var lastGetDiagnosisKey = 0
-
-    init {
-        // TODO: generate this only once, put in key storage
-        generateTracingKey()
-
-        // Setup regular Rolling Proximity Identify refresh, which powers BLE broadcast
-        ratchetRollingProximityIdentifier()
-
-        // Setup regular query for
-        periodicGetDiagnosisKeys()
-    }
-
     @ExperimentalStdlibApi
     private fun ratchetRollingProximityIdentifier() {
-        val s = "CT-RPI".encodeToByteArray()
-        val info = s.plus(UIntToByteArray(timeIntervalNumber(currentTimestamp())))
-        dailyTracingKey.value?.let {
-            val rpi = HMAC(it.key, info)
-        }
         Handler().postDelayed({
             ratchetRollingProximityIdentifier()
         }, periodicRachetFrequencyInSeconds * 1000L)
@@ -112,11 +118,13 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
     // 1. Client posts reports to /report
     private fun postDiagnosisKeys(diagnosisKeys: List<DailyTracingKey>) = ctAPI.postDiagnosisKeys(diagnosisKeys)
 
-    // 2. Client queries for Array<Reports> from /diagnoses/<startDayNumber>
+    // 2. Client queries for Array<DailyTracingKey> from /diagnoses/<startDayNumber>
     private fun getDiagnosisKeys(dayNumber: UInt) = ctAPI.getDiagnosisKeys(dayNumber)
 
-    fun doPostDiagnosisKeys(dayNumber : UInt) {
+    // lastGetDiagnosisKey is the last time (unix timestamp) the Report were requested
+    var lastGetDiagnosisKey = 0
 
+    fun doPostDiagnosisKeys(dayNumber : UInt) {
         // put all the data for the user in the last 2 weeks in one place
         val timeSeen = hashMapOf<UInt, DailyTracingKey>()
         var afterDay = dayNumber(currentTimestamp()) - 14u
@@ -134,7 +142,6 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
     }
 
     private fun periodicGetDiagnosisKeys() {
-        // for all the recently seen H(PK)
         val startDay = dayNumber(currentTimestamp()) - 14u
         var recentlyBroadcast = dailyTracingKeyDAO.recentDailyTracingKey(startDay)
         var recentlySeen = rollingProximityIdentifierDAO.recentlySeen(startDay)
@@ -146,7 +153,7 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
                             val r: List<DailyTracingKey>? = response.body()
                             r?.let {
                                     // compute matches
-                                    val matches = findMatchedReports(recentlyBroadcast, recentlySeen)
+                                    val matches = findContactInfo(recentlyBroadcast, recentlySeen)
                                     // insert matches into the database
                                     for ( i in matches.indices ) {
                                         contactInfoDAO.insert(matches[i])
@@ -170,9 +177,9 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
     }
 
 
-    fun findMatchedReports(recentlyBroadcast : List<DailyTracingKey>, recentlySeen : List<RollingProximityIdentifier>) : List<ContactInfo> {
+    fun findContactInfo(recentlyBroadcast : List<DailyTracingKey>, recentlySeen : List<RollingProximityIdentifier>) : List<ContactInfo> {
         // for all the recentlySeen, organize them by prefixes of the Hash
-        val map = hashMapOf<Int, MutableList<ByteArray>>()
+        val map = hashMapOf<UInt, MutableList<ByteArray>>()
         val timeSeen = hashMapOf<ByteArray, Long>()
         for (i in recentlySeen.indices) {
             // TODO
@@ -184,14 +191,15 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
             // KEY JOIN IS HERE:
             //   dayNumber of the DailyTracingKey
             //   dayNumber of the RollingProximityIdentifier
-            map[dailyTracingKey.dayNumber]?.let {
-                    for ( j in it.indices ) {
-                        val pk = it[j]
-                        timeSeen[pk]?.let {
-                            val match = ContactInfo()
-                            matches.add(match)
-                        }
-                    }
+            val dn = dailyTracingKey.dayNumber
+            map[dn]?.let {
+                for (j in it.indices) {
+                   val pk = it[j]
+                   timeSeen[pk]?.let {
+                      val match = ContactInfo()
+                      matches.add(match)
+                   }
+                }
             }
         }
         return matches.toList()
@@ -227,13 +235,14 @@ internal class CTRepo(application: Application, private val ctAPI: API) : Contac
      * Only 14 days of history are available.
      */
     override fun startSharingDailyTracingKeys() : Status {
-        // TODO: show user dialog for sharing
+        // TODO: show user dialog for sharing (post diagnosis)
 
         // TODO: Store this in preferences/...
         isSharingDailyTracingKeys = true
         isSharingDailyTracingKeysStart = dayNumber(currentTimestamp())
 
-        contactTracingCallback?.requestUploadDailyTracingKeys()
+        // this should send the dailyTracingKeys to the server going FORWARD, not backward
+        //contactTracingCallback?.requestUploadDailyTracingKeys()
 
         return  Status.SUCCESS
     }

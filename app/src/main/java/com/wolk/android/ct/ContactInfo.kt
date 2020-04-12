@@ -9,7 +9,7 @@ import java.util.*
 class ContactInfo {
     @PrimaryKey
     /** Day-level resolution that the contact occurred.  */
-    var contactDate: Date? = null
+    var contactDate: Int = 0
 
     /** Length of contact in 5 minute increments.  */
     @ColumnInfo(name = "duration")
